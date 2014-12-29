@@ -104,7 +104,7 @@ namespace Kata
                 {
                     InUlt = true;
                 }
-                else if (args.Animation == "Run" || args.Animation == "Idle1" || args.Animation == "Attack2" || args.Animation == "spell1" || args.Animation == "spell2" || args.Animation == "spell3" || args.Animation == "Attack1")
+                else if (args.Animation == "Run" || args.Animation == "Idle1" || args.Animation == "Attack2" || args.Animation == "Attack1")
                 { 
                     InUlt = false; 
                 }
@@ -224,42 +224,46 @@ namespace Kata
             //KeyBind combokey = Men.SubMenu("Orb Walker").Item("Orbwalk").GetValue<KeyBind>();
             //KeyBind mixedkey = Men.SubMenu("Orb Walker").Item("Mixed").GetValue<KeyBind>();
 
-            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && Target.IsValidTarget())
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && Target.IsValidTarget() && !InUlt)
             {
                 if (Q.InRange(Target))
                 {
-                    if (Q.IsReady() && !InUlt)
+                    if (Q.IsReady())
                     {
                         Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
-                    if (E.IsReady() && !InUlt)
+                    if (E.IsReady())
                     {
                         E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
                 }
                 else {
-                    if (E.IsReady() && !InUlt)
+                    if (E.IsReady())
                     {
                         E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
-                    if (Q.IsReady() && !InUlt)
+                    if (Q.IsReady())
                     {
                         Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
                 }
-                if (W.IsReady() && W.InRange(Target) && !InUlt)
+                if (W.IsReady() && W.InRange(Target))
                 {
+                    Orbwalker.SetAttack(false);
+                    Orbwalker.SetMovement(false);
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
+                    return;
                 }
                 if (R.IsReady() && !InUlt)
                 {
                     Orbwalker.SetAttack(false);
                     Orbwalker.SetMovement(false);
+                    InUlt = true;
                     R.Cast(Men.Item("Packet cast").GetValue<bool>());
                     return;
                 }
             }
-            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed && Target.IsValidTarget())
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed && Target.IsValidTarget() && !InUlt)
             {
                 if (Q.InRange(Target))
                 {
