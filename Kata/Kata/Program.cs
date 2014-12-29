@@ -13,19 +13,24 @@ namespace Kata
 {
     class Program
     {
+
+        //shortcuts
+        private static Obj_AI_Hero Player = ObjectManager.Player;
+        // spells
         private static Spell Q;
         private static Spell W;
         private static Spell E;
         private static Spell R;
         private static bool InUlt = false;
-        private static Menu Men;
         private static SpellSlot IgniteSlot;
         private static List<Spell> ComboList = new List<Spell>();
+
+        //menu & orbwalking
+        private static Menu Men;
         private static Orbwalking.Orbwalker Orbwalker;
         private static Menu OrbwalkingMenu;
         private static Menu TSMenu;
         private static TargetSelector TS;
-        private static Obj_AI_Hero target;
 
         static void Main(string[] args)
         {
@@ -46,22 +51,25 @@ namespace Kata
             ComboList.Add(E);
             ComboList.Add(W);
             ComboList.Add(R);
-            
+            //init menu
             Men = new Menu("Katarina","Katarina", true);
             Men.AddToMainMenu();
             OrbwalkingMenu = new Menu("Orb Walker", "Orb Walker");
             Orbwalker = new Orbwalking.Orbwalker(OrbwalkingMenu);
             Men.AddSubMenu(OrbwalkingMenu);
-
+            // ts menu
             TSMenu = new Menu("Target Selector", "Target Selector");
             TargetSelector.AddToMenu(TSMenu);
             Men.AddSubMenu(TSMenu);
-
+            //packet cast item
             Men.AddItem(new MenuItem("Packet cast", "Packet cast")).SetValue<bool>(false);
-
+            //drawing menu
             Men.AddSubMenu(new Menu("Drawing", "Drawing"));
             Men.SubMenu("Drawing").AddItem(new MenuItem("Range circle", "Range circle").SetValue(false));
-            Men.SubMenu("Drawing").AddItem(new MenuItem("HP indicator", "HP indicator").SetValue(false));
+            Men.SubMenu("Drawing").AddItem(new MenuItem("HP indicator", "HP indicator (broken)").SetValue(false));
+            //farming settings
+            Men.AddSubMenu(new Menu("Harass", "Harass"));
+            Men.SubMenu("Harass").AddItem(new MenuItem("Mode", "Mode").SetValue(new StringList(new[] { "QEW", "QW" }, 0 )));
 
             LeagueSharp.Drawing.OnDraw += Drawing;
             LeagueSharp.Obj_AI_Base.OnPlayAnimation += PlayAnimation;
@@ -79,14 +87,12 @@ namespace Kata
             }
             else
             {
-                //GetETarget();
-                KillSteal();
                 Combo();
+                KillSteal();
                 Farm();
                 Orbwalker.SetAttack(true);
                 Orbwalker.SetMovement(true);
             }
-            //Game.PrintChat(ObjectManager.Player.BaseAbilityDamage.ToString());
         }
 
         private static void PlayAnimation(GameObject sender, GameObjectPlayAnimationEventArgs args)
@@ -143,9 +149,15 @@ namespace Kata
                 var Qdmg = Q.GetDamage(hero);
                 var Wdmg = W.GetDamage(hero);
                 var Edmg = E.GetDamage(hero);
+                var MarkDmg = Damage.CalcDamage(Player, hero, Damage.DamageType.Magical , Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
                 if (hero.Health - Edmg < 0 && E.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
+                    return;
+                }
+                if (hero.Health - Qdmg < 0 && Q.IsReady())
+                {
+                    Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     return;
                 }
                 if (hero.Health - Edmg - Wdmg < 0 && E.IsReady() && W.IsReady())
@@ -160,7 +172,7 @@ namespace Kata
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     return;
                 }
-                if (hero.Health - Edmg - Wdmg - Qdmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady())
+                if (hero.Health - Edmg - Wdmg - Qdmg - MarkDmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
@@ -206,58 +218,125 @@ namespace Kata
 
         }
 
-        private static void GetETarget()
-        {
-            foreach (Obj_AI_Hero hero in ObjectManager.Get<Obj_AI_Hero>().Where(hero => ObjectManager.Player.Distance(hero.ServerPosition) <= E.Range && hero.Name != ObjectManager.Player.Name && hero.IsValidTarget()))
-            {
-                Game.PrintChat("yra 1");
-                Game.PrintChat(hero.Name);
-            }
-        }
-
         private static void Combo()
         {
             Obj_AI_Hero Target = TargetSelector.GetTarget(E.Range, TargetSelector.DamageType.Magical);
-            KeyBind combokey = Men.SubMenu("Orb Walker").Item("Orbwalk").GetValue<KeyBind>();
+            //KeyBind combokey = Men.SubMenu("Orb Walker").Item("Orbwalk").GetValue<KeyBind>();
             //KeyBind mixedkey = Men.SubMenu("Orb Walker").Item("Mixed").GetValue<KeyBind>();
 
-            if (combokey.Active && Target.IsValidTarget())
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && Target.IsValidTarget())
             {
-                if (Q.IsReady() && !InUlt)
+                if (Q.InRange(Target))
                 {
-                    Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    if (Q.IsReady() && !InUlt)
+                    {
+                        Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                    if (E.IsReady() && !InUlt)
+                    {
+                        E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
                 }
-                if (E.IsReady() && !InUlt)
-                {
-                    E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                else {
+                    if (E.IsReady() && !InUlt)
+                    {
+                        E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                    if (Q.IsReady() && !InUlt)
+                    {
+                        Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
                 }
                 if (W.IsReady() && W.InRange(Target) && !InUlt)
                 {
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                 }
-                if (R.IsReady())
+                if (R.IsReady() && !InUlt)
                 {
                     Orbwalker.SetAttack(false);
                     Orbwalker.SetMovement(false);
                     R.Cast(Men.Item("Packet cast").GetValue<bool>());
+                    return;
                 }
-                
+            }
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed && Target.IsValidTarget())
+            {
+                if (Q.InRange(Target))
+                {
+                    if (Q.IsReady() && !InUlt)
+                    {
+                        Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                    if (E.IsReady() && !InUlt && Men.SubMenu("Harass").Item("Mode").GetValue<StringList>().SelectedIndex == 0)
+                    {
+                        E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                }
+                else
+                {
+                    if (E.IsReady() && !InUlt && Men.SubMenu("Harass").Item("Mode").GetValue<StringList>().SelectedIndex == 0)
+                    {
+                        E.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                    if (Q.IsReady() && !InUlt)
+                    {
+                        Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
+                    }
+                }
+                if (W.IsReady() && W.InRange(Target) && !InUlt)
+                {
+                    W.Cast(Men.Item("Packet cast").GetValue<bool>());
+                }
             }
 
         }
 
         private static void Farm()
         {
-            KeyBind pushlanekey = Men.SubMenu("Orb Walker").Item("LaneClear").GetValue<KeyBind>();
-            KeyBind farmkey = Men.SubMenu("Orb Walker").Item("LastHit").GetValue<KeyBind>();
+            //KeyBind pushlanekey = Men.SubMenu("Orb Walker").Item("LaneClear").GetValue<KeyBind>();
+            //KeyBind farmkey = Men.SubMenu("Orb Walker").Item("LastHit").GetValue<KeyBind>();
 
-            if (pushlanekey.Active)
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LastHit || Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear)
             {
-            }
-            if (farmkey.Active)
-            {
-            }
+                foreach (var minion in ObjectManager.Get<Obj_AI_Minion>().Where(minion => minion.IsValidTarget() && minion.IsEnemy && minion.Distance(Player.ServerPosition) < E.Range))
+                {
+                    var Qdmg = Q.GetDamage(minion);
+                    var Wdmg = W.GetDamage(minion);
+                    var MarkDmg = Damage.CalcDamage(Player, minion, Damage.DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
 
+                    if (minion.Health - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= Q.Range) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.Health - Wdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range) { W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.Health - Wdmg - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    {
+                        W.Cast(Men.Item("Packet cast").GetValue<bool>());
+                    }
+                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    {
+                        Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
+                    }
+
+                }
+            }
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.LaneClear)
+            {
+                foreach (var minion in ObjectManager.Get<Obj_AI_Minion>().Where(minion => minion.IsValidTarget() && minion.IsEnemy && minion.Distance(Player.ServerPosition) < E.Range))
+                {
+                    var Qdmg = Q.GetDamage(minion);
+                    var Wdmg = W.GetDamage(minion);
+                    var Edmg = E.GetDamage(minion);
+                    var MarkDmg = Damage.CalcDamage(Player, minion, Damage.DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
+
+                    if (minion.Health - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= E.Range) { W.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
+
+                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    {
+                        E.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
+                        Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
+                    }
+
+                }
+            }
         }
 
     }
