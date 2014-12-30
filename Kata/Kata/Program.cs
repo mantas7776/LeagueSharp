@@ -254,7 +254,7 @@ namespace Kata
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     return;
                 }
-                if (R.IsReady() && !InUlt)
+                if (R.IsReady() && !InUlt && !E.IsReady())
                 {
                     Orbwalker.SetAttack(false);
                     Orbwalker.SetMovement(false);
@@ -308,14 +308,14 @@ namespace Kata
                     var Wdmg = W.GetDamage(minion);
                     var MarkDmg = Damage.CalcDamage(Player, minion, Damage.DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
 
-                    if (minion.Health - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= Q.Range) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
-                    if (minion.Health - Wdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range) { W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
-                    if (minion.Health - Wdmg - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
-                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    if (minion.Health - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= Q.Range && Q.IsReady()) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.Health - Wdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && W.IsReady()) { W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.Health - Wdmg - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && Q.IsReady() && W.IsReady()) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && W.IsReady())
                     {
                         W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     }
-                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && Q.IsReady() && W.IsReady())
                     {
                         Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
                     }
@@ -331,9 +331,9 @@ namespace Kata
                     var Edmg = E.GetDamage(minion);
                     var MarkDmg = Damage.CalcDamage(Player, minion, Damage.DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
 
-                    if (minion.Health - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= E.Range) { W.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
+                    if (minion.Health - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= E.Range && E.IsReady()) { W.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
 
-                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range)
+                    if (minion.Health - Wdmg - Qdmg - MarkDmg - Edmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && E.IsReady() && Q.IsReady() && W.IsReady())
                     {
                         E.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
