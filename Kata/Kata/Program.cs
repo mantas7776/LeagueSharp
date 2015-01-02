@@ -141,7 +141,7 @@ namespace Kata
             foreach (Obj_AI_Hero hero in ObjectManager.Get<Obj_AI_Hero>().Where(
                     hero => 
                     ObjectManager.Player.Distance(hero.ServerPosition) <= E.Range 
-                    && hero.Name != ObjectManager.Player.Name 
+                    && !hero.IsMe
                     && hero.IsValidTarget() 
                     && hero.IsEnemy 
                     && !hero.IsInvulnerable
@@ -151,37 +151,43 @@ namespace Kata
                 var Wdmg = W.GetDamage(hero);
                 var Edmg = E.GetDamage(hero);
                 var MarkDmg = Damage.CalcDamage(Player, hero, Damage.DamageType.Magical , Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
-                var Ignitedmg = Damage.GetDamageSpell(Player, hero, IgniteSlot).CalculatedDamage;
+                float Ignitedmg;
+                if (IgniteSlot != SpellSlot.Unknown)
+                {
+                    Ignitedmg = (float)Damage.GetSummonerSpellDamage(Player, hero, Damage.SummonerSpell.Ignite);
+                }
+                else { Ignitedmg = 0f; }
                 //procmark ks
-                if (hero.HasBuff("katarinaqmark") && hero.Health - Wdmg - MarkDmg < 0)
+                if (hero.HasBuff("katarinaqmark") && hero.Health - Wdmg - MarkDmg < 0 && W.IsReady() && W.InRange(hero))
                 {
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
+                }
+                // ignite
+                if (hero.Health - Ignitedmg < 0 && IgniteSlot.IsReady())
+                {
+                    Player.Spellbook.CastSpell(IgniteSlot, hero);
                 }
                 // E
                 if (hero.Health - Edmg < 0 && E.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
-                    return;
                 }
                 // Q
-                if (hero.Health - Qdmg < 0 && Q.IsReady())
+                if (hero.Health - Qdmg < 0 && Q.IsReady() && Q.InRange(hero))
                 {
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
-                    return;
                 }
                 // E+W
                 if (hero.Health - Edmg - Wdmg < 0 && E.IsReady() && W.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
-                    return;
                 }
                 // E+Q
                 if (hero.Health - Edmg - Qdmg < 0 && E.IsReady() && Q.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
-                    return;
                 }
                 // E + Q + W no proc Q
                 if (hero.Health - Edmg - Wdmg - Qdmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady())
@@ -190,15 +196,14 @@ namespace Kata
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     // cast w without procing mark
-                    return;
                 }
                 // E+Q+W+proc
                 if (hero.Health - Edmg - Wdmg - Qdmg - MarkDmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady())
                 {
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
+                    W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     // no need to cast W because if it casts too fast no mark proc, so it waits until another func casts it
-                    return;
                 }
                 // E+Q+W+ignite
                 if (hero.Health - Edmg - Wdmg - Qdmg - Ignitedmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady() && IgniteSlot.IsReady())
@@ -207,13 +212,6 @@ namespace Kata
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     Player.Spellbook.CastSpell(IgniteSlot, hero);
-                    return;
-                }
-                // ignite
-                if (hero.Health - Ignitedmg < 0 && IgniteSlot.IsReady())
-                {
-                    Player.Spellbook.CastSpell(IgniteSlot, hero);
-                    return;
                 }
             }
 
@@ -229,13 +227,19 @@ namespace Kata
                     focus => 
                     focus.Distance(target.ServerPosition) <= Q.Range
                     && focus.IsEnemy
+                    && !focus.IsMe
                     && !focus.IsInvulnerable
                     && focus.IsValidTarget()
                 ))
                 {
                     var Qdmg = Q.GetDamage(focus);
                     var Wdmg = W.GetDamage(focus);
-                    var Ignitedmg = Damage.GetDamageSpell(Player, focus, IgniteSlot).CalculatedDamage;
+                    float Ignitedmg;
+                    if (IgniteSlot != SpellSlot.Unknown)
+                    {
+                        Ignitedmg = (float)Damage.GetSummonerSpellDamage(Player, focus, Damage.SummonerSpell.Ignite);
+                    }
+                    else { Ignitedmg = 0f; }
                     var MarkDmg = Damage.CalcDamage(Player, focus, Damage.DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15);
                     //var PassiveDmg = Q.Level * 15 + ObjectManager.Player.
                     // Q
@@ -243,7 +247,6 @@ namespace Kata
                     {
                         E.Cast(target, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(focus, Men.Item("Packet cast").GetValue<bool>());
-                        return;
                     }
                     // Q+W
                     if (focus.Distance(target.ServerPosition) <= W.Range && focus.Health - Qdmg - Wdmg < 0 && E.IsReady() && Q.IsReady()) 
@@ -251,14 +254,13 @@ namespace Kata
                         E.Cast(target, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(focus, Men.Item("Packet cast").GetValue<bool>());
                         W.Cast(Men.Item("Packet cast").GetValue<bool>());
-                        return;
                     }
                     // Q + W + markproc
                     if (focus.Distance(target.ServerPosition) <= W.Range && focus.Health - Qdmg - Wdmg - MarkDmg< 0 && E.IsReady() && Q.IsReady() && W.IsReady())
                     {
                         E.Cast(target, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(focus, Men.Item("Packet cast").GetValue<bool>());
-                        return;
+                        W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     }
                     // Q + ignite
                     if (focus.Distance(target.ServerPosition) <= 600 && focus.Health - Qdmg - Ignitedmg < 0 && E.IsReady() && Q.IsReady() && IgniteSlot.IsReady())
@@ -266,7 +268,6 @@ namespace Kata
                         E.Cast(target, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(focus, Men.Item("Packet cast").GetValue<bool>());
                         Player.Spellbook.CastSpell(IgniteSlot, focus);
-                        return;
                     }
                     // Q + W + ignite
                     if (focus.Distance(target.ServerPosition) <= W.Range && focus.Health - Qdmg - Wdmg - Ignitedmg < 0 && E.IsReady() && Q.IsReady() && W.IsReady() && IgniteSlot.IsReady())
@@ -275,7 +276,6 @@ namespace Kata
                         Q.Cast(focus, Men.Item("Packet cast").GetValue<bool>());
                         W.Cast(Men.Item("Packet cast").GetValue<bool>());
                         Player.Spellbook.CastSpell(IgniteSlot, focus);
-                        return;
                     }
 
                 }
@@ -354,7 +354,7 @@ namespace Kata
                         Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
                 }
-                if (W.IsReady() && W.InRange(Target) && Target.HasBuff("katarinaqmark"))
+                if (W.IsReady() && Player.Distance(Target.ServerPosition) < W.Range) //&& Target.HasBuff("katarinaqmark")
                 {
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                 }
@@ -376,13 +376,14 @@ namespace Kata
                     if (minion.Health - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= Q.Range && Q.IsReady()) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); }
                     if (minion.Health - Wdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && W.IsReady()) { W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
                     if (minion.Health - Wdmg - Qdmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && Q.IsReady() && W.IsReady()) { Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>()); W.Cast(Men.Item("Packet cast").GetValue<bool>()); }
-                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && W.IsReady())
-                    {
-                        W.Cast(Men.Item("Packet cast").GetValue<bool>());
-                    }
-                    if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - Qdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && Q.IsReady() && W.IsReady())
+                    //if (minion.HasBuff("katarinaqmark") && minion.Health - Wdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && W.IsReady())
+                    //{
+                    //    W.Cast(Men.Item("Packet cast").GetValue<bool>());
+                    //}
+                    if (minion.Health - Wdmg - Qdmg - MarkDmg <= 0 && minion.Distance(Player.ServerPosition) <= W.Range && Q.IsReady() && W.IsReady())
                     {
                         Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
+                        W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     }
 
                 }
@@ -402,6 +403,7 @@ namespace Kata
                     {
                         E.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
                         Q.Cast(minion, Men.Item("Packet cast").GetValue<bool>());
+                        W.Cast(Men.Item("Packet cast").GetValue<bool>());
                     }
 
                 }
