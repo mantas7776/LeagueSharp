@@ -158,7 +158,7 @@ namespace Kata
                 }
                 else { Ignitedmg = 0f; }
                 //procmark ks
-                if (hero.HasBuff("katarinaqmark") && hero.Health - Wdmg - MarkDmg < 0 && W.IsReady() && W.InRange(hero))
+                if (hero.HasBuff("katarinaqmark") && hero.Health - Wdmg - MarkDmg < 0 && W.IsReady() && W.IsInRange(hero))
                 {
                     W.Cast(Men.Item("Packet cast").GetValue<bool>());
                 }
@@ -173,7 +173,7 @@ namespace Kata
                     E.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                 }
                 // Q
-                if (hero.Health - Qdmg < 0 && Q.IsReady() && Q.InRange(hero))
+                if (hero.Health - Qdmg < 0 && Q.IsReady() && Q.IsInRange(hero))
                 {
                     Q.Cast(hero, Men.Item("Packet cast").GetValue<bool>());
                 }
@@ -293,7 +293,7 @@ namespace Kata
                 {
                     DFG.Cast(Target);
                 }
-                if (Q.InRange(Target))
+                if (Q.IsInRange(Target))
                 {
                     if (Q.IsReady())
                     {
@@ -314,7 +314,7 @@ namespace Kata
                         Q.Cast(Target, Men.Item("Packet cast").GetValue<bool>());
                     }
                 }
-                if (W.IsReady() && W.InRange(Target))
+                if (W.IsReady() && W.IsInRange(Target))
                 {
                     Orbwalker.SetAttack(false);
                     Orbwalker.SetMovement(false);
@@ -332,7 +332,7 @@ namespace Kata
             }
             if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed && Target.IsValidTarget() && !InUlt)
             {
-                if (Q.InRange(Target))
+                if (Q.IsInRange(Target))
                 {
                     if (Q.IsReady())
                     {

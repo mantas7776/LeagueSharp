@@ -1,1 +1,1 @@
-C:\Users\Mantas\documents\visual studio 2013\Projects\Kata\Kata\bin\Release\Kata.exe.config
+C:\Users\Mantas\Documents\Visual Studio 2013\Projects\Kata\Kata\bin\Release\Kata.exe.config
