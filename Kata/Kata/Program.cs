@@ -166,19 +166,16 @@ namespace Kata
                 if (hero.Health - Ignitedmg < 0 && IgniteSlot.IsReady() && InIgniteRange(hero))
                 {
                     Player.Spellbook.CastSpell(IgniteSlot, hero);
-                    return;
                 }
                 // E
                 if (hero.Health - Edmg < 0 && E.IsReady() && E.IsInRange(hero))
                 {
                     E.Cast(hero);
-                    return;
                 }
                 // Q
                 if (hero.Health - Qdmg < 0 && Q.IsReady() && Q.IsInRange(hero))
                 {
                     Q.Cast(hero);
-                    return;
                 }
                 if (E.IsInRange(hero))
                 {
@@ -187,14 +184,12 @@ namespace Kata
                     {
                         E.Cast(hero);
                         W.Cast();
-                        return;
                     }
                     // E+Q
                     if (hero.Health - Edmg - Qdmg < 0 && E.IsReady() && Q.IsReady())
                     {
                         E.Cast(hero);
                         Q.Cast(hero);
-                        return;
                     }
                     // E + Q + W no proc Q
                     
@@ -203,7 +198,6 @@ namespace Kata
                         E.Cast(hero);
                         Q.Cast(hero);
                         W.Cast();
-                        return;
                         // cast w without procing mark
                     }
                     
