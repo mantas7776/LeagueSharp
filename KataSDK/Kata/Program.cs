@@ -134,12 +134,21 @@ namespace KataSDK
                     // 34 x 9 y hpbar start
                     // 138 x end
                     var percent = health / maxhealth * 104f;
-                    Vector2 start = new Vector2(34f, 8f);
-                    Vector2 end = new Vector2(34f + percent, 8f);
+                    Vector2 end = new Vector2(10f + CalculateDmg(hero), 20f);
+                    Vector2 start = new Vector2(10f + percent, 20f);
                     Drawing.DrawLine(hero.HPBarPosition + start, hero.HPBarPosition + end, 1f, System.Drawing.Color.Red);
                 }
             }
         }
+
+        private static float CalculateDmg(Obj_AI_Hero hero)
+        {
+            float lefthp = hero.Health;
+            lefthp = lefthp - (float)Qdmg(hero) - (float)Wdmg(hero) - (float)Edmg(hero) - (float)RDmg(hero) - (float)MarkDmg(hero);
+            lefthp = lefthp / hero.MaxHealth * 104f;
+            return lefthp;
+        }
+
         #endregion
 
         private static bool InIgniteRange(Obj_AI_Hero hero)
@@ -298,6 +307,16 @@ namespace KataSDK
         #endregion
 
         #region Combo
+        private static void SimpleCombo()
+        {
+            var Target = TargetSelector.GetTarget(E.Range, DamageType.Magical);
+            if (Orbwalker.ActiveMode == OrbwalkerMode.Orbwalk)
+            {
+                if (Q.IsReady()) Q.Cast(Target);
+                if (E.IsReady()) E.Cast(Target);
+            }
+        }
+
         private static void Combo()
         {
             Obj_AI_Hero Target = TargetSelector.GetTarget(E.Range, DamageType.Magical);
@@ -305,6 +324,11 @@ namespace KataSDK
 
             if (Orbwalker.ActiveMode == OrbwalkerMode.Orbwalk && Target.IsValidTarget() && !InUlt)
             {
+                if (Q.Level == 0 || W.Level == 0 || E.Level == 0)
+                {
+                    SimpleCombo();
+                    return;
+                }
                 if (Target.HasBuff("KatarinaQMark") && W.IsReady() && W.IsInRange(Target))
                 {
                     W.Cast();
@@ -411,7 +435,7 @@ namespace KataSDK
         private static double Wdmg(Obj_AI_Base target)
         {
             return Player.CalculateDamage(target, DamageType.Magical,
-                new[] { 40, 75, 110, 145, 180 }[W.Level - 1] + 0.25 * Player.FlatMagicDamageMod + Player.TotalAttackDamage * 0.60) * overkill;
+                new[] { 40, 75, 110, 145, 180 }[W.Level - 1] + 0.25 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 0.60) * overkill;
         }
         private static double Edmg(Obj_AI_Base target)
         {
@@ -421,6 +445,11 @@ namespace KataSDK
         private static double MarkDmg(Obj_AI_Base target)
         {
             return Player.CalculateDamage(target, DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15) * overkill;        
+        }
+        private static double RDmg(Obj_AI_Base target)
+        {
+            return Player.CalculateDamage(target, DamageType.Magical,
+               new[] { 350, 550, 750 }[R.Level - 1] + 2.5 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 3.75) * overkill;
         }
         private static double IgniteDmg(Obj_AI_Base target)
         {
