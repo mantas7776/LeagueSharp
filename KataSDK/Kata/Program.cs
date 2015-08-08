@@ -134,8 +134,8 @@ namespace KataSDK
                     // 34 x 9 y hpbar start
                     // 138 x end
                     var percent = health / maxhealth * 104f;
-                    Vector2 end = new Vector2(10f + CalculateDmg(hero), 20f);
-                    Vector2 start = new Vector2(10f + percent, 20f);
+                    Vector2 end = new Vector2(10f + CalculateDmg(hero), 7f);
+                    Vector2 start = new Vector2(10f + percent, 7f);
                     Drawing.DrawLine(hero.HPBarPosition + start, hero.HPBarPosition + end, 1f, System.Drawing.Color.Red);
                 }
             }
@@ -144,7 +144,12 @@ namespace KataSDK
         private static float CalculateDmg(Obj_AI_Hero hero)
         {
             float lefthp = hero.Health;
-            lefthp = lefthp - (float)Qdmg(hero) - (float)Wdmg(hero) - (float)Edmg(hero) - (float)RDmg(hero) - (float)MarkDmg(hero);
+            if (Q.IsReady()) lefthp -= (float)Qdmg(hero);
+            if (E.IsReady()) lefthp -= (float)Edmg(hero);
+            if (W.IsReady()) lefthp -= (float)Wdmg(hero);
+            if (R.IsReady()) lefthp -= (float)RDmg(hero);
+            lefthp -= (float)MarkDmg(hero);
+            Console.WriteLine(lefthp);
             lefthp = lefthp / hero.MaxHealth * 104f;
             return lefthp;
         }
@@ -310,6 +315,7 @@ namespace KataSDK
         private static void SimpleCombo()
         {
             var Target = TargetSelector.GetTarget(E.Range, DamageType.Magical);
+            if (Target == null) return;
             if (Orbwalker.ActiveMode == OrbwalkerMode.Orbwalk)
             {
                 if (Q.IsReady()) Q.Cast(Target);
@@ -319,16 +325,16 @@ namespace KataSDK
 
         private static void Combo()
         {
+            if (Q.Level == 0 || W.Level == 0 || E.Level == 0)
+            {
+                SimpleCombo();
+                return;
+            }
             Obj_AI_Hero Target = TargetSelector.GetTarget(E.Range, DamageType.Magical);
             if (Target == null) return;
 
             if (Orbwalker.ActiveMode == OrbwalkerMode.Orbwalk && Target.IsValidTarget() && !InUlt)
             {
-                if (Q.Level == 0 || W.Level == 0 || E.Level == 0)
-                {
-                    SimpleCombo();
-                    return;
-                }
                 if (Target.HasBuff("KatarinaQMark") && W.IsReady() && W.IsInRange(Target))
                 {
                     W.Cast();
