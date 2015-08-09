@@ -13,7 +13,6 @@ using LeagueSharp.SDK.Core.UI.IMenu;
 using LeagueSharp.SDK.Core.UI.IMenu.Values;
 using SharpDX;
 using LeagueSharp.SDK.Core.Events;
-using LeagueSharp.SDK.Core.IDrawing;
 
 
 namespace KataSDK
@@ -31,7 +30,7 @@ namespace KataSDK
         private static bool InUlt = false;
         private static SpellSlot IgniteSlot;
         private const int Meleerng = 125;
-        private const float overkill = 0.85f;
+        private const float overkill = 15f;
 
         //menu & orbwalking
         private static Menu Men;
@@ -60,7 +59,7 @@ namespace KataSDK
             Menu DrawingMenu = new Menu("Drawing", "Drawing");
             {
                 DrawingMenu.Add(new MenuBool("Range circle", "Range circle", false));
-                DrawingMenu.Add(new MenuBool("HP indicator", "HP indicator (broken)", false));
+                DrawingMenu.Add(new MenuBool("HP indicator", "HP indicator", false));
                 Men.Add(DrawingMenu);
             }
             //farming settings
@@ -90,7 +89,8 @@ namespace KataSDK
             else
             {
                 KillSteal();
-                Combo();
+                if (Q.Level == 0 || W.Level == 0 || E.Level == 0) SimpleCombo();
+                else Combo();
                 Farm();
                 Orbwalker.Attack = true;
                 Orbwalker.Movement = true;
@@ -102,7 +102,6 @@ namespace KataSDK
         {
             if (sender.IsMe)
             {
-                //System.IO.File.AppendAllText(@"c:\kata2.txt", args.Animation.ToString() + Environment.NewLine);
                 if (args.Animation == "Spell4")
                 {
                     InUlt = true;
@@ -119,24 +118,28 @@ namespace KataSDK
         {
             if (Men["Drawing"]["Range circle"].GetValue<MenuBool>().Value == true)
             {
-                //Render.Circle.DrawCircle(ObjectManager.Player.Position, E.Range, System.Drawing.Color.LimeGreen);
                 Drawing.DrawCircle(ObjectManager.Player.Position, E.Range, System.Drawing.Color.LimeGreen);
             }
 
             if (Men["Drawing"]["HP indicator"].GetValue<MenuBool>().Value == true)
             {
-                foreach (var hero in ObjectManager.Get<Obj_AI_Hero>().Where(hero => hero.IsValidTarget()))
+                foreach (var hero in ObjectManager.Get<Obj_AI_Hero>().Where(hero => hero.IsValidTarget() && hero.IsEnemy))
                 {
                     var health = hero.Health;
                     var maxhealth = hero.MaxHealth;
                     Vector2 pos = hero.HPBarPosition;
-
-                    // 34 x 9 y hpbar start
-                    // 138 x end
-                    var percent = health / maxhealth * 104f;
-                    Vector2 end = new Vector2(10f + CalculateDmg(hero), 7f);
-                    Vector2 start = new Vector2(10f + percent, 7f);
-                    Drawing.DrawLine(hero.HPBarPosition + start, hero.HPBarPosition + end, 1f, System.Drawing.Color.Red);
+                    pos.Y += 20;
+                    pos.X += 9;
+                    Vector2 pos2 = pos;
+                    var currenthp = hero.Health * 104f / hero.MaxHealth;
+                    pos.X += currenthp;
+                   // Console.WriteLine("Curr: " + currenthp);
+                    var aftercombo = CalculateDmg(hero);
+                    pos2.X += aftercombo;
+                    if (aftercombo <= currenthp - 1)
+                    {
+                        Drawing.DrawLine(pos, pos2, 1, System.Drawing.Color.Aqua);
+                    }
                 }
             }
         }
@@ -149,8 +152,8 @@ namespace KataSDK
             if (W.IsReady()) lefthp -= (float)Wdmg(hero);
             if (R.IsReady()) lefthp -= (float)RDmg(hero);
             lefthp -= (float)MarkDmg(hero);
-            Console.WriteLine(lefthp);
-            lefthp = lefthp / hero.MaxHealth * 104f;
+            //Console.WriteLine(lefthp);
+            lefthp = lefthp * 104f / hero.MaxHealth;
             return lefthp;
         }
 
@@ -173,6 +176,7 @@ namespace KataSDK
                     && !hero.IsInvulnerable
                 ))
             {
+                if (hero == null) return;
                 //procmark ks
                 if (hero.HasBuff("KatarinaQMark") && hero.Health - Wdmg(hero) - MarkDmg(hero) < 0 && W.IsReady() && W.IsInRange(hero))
                 {
@@ -257,7 +261,7 @@ namespace KataSDK
                     && focus.IsValidTarget()
                 ))
                 {
-
+                    if (focus == null || target == null) return;
                     // Q
                     if (focus.Health - Qdmg(focus) < 0 && E.IsReady() && Q.IsReady() && focus.Distance(target.ServerPosition) <= Q.Range)
                     {
@@ -325,11 +329,6 @@ namespace KataSDK
 
         private static void Combo()
         {
-            if (Q.Level == 0 || W.Level == 0 || E.Level == 0)
-            {
-                SimpleCombo();
-                return;
-            }
             Obj_AI_Hero Target = TargetSelector.GetTarget(E.Range, DamageType.Magical);
             if (Target == null) return;
 
@@ -435,27 +434,31 @@ namespace KataSDK
         #region SpellDamage
         private static double Qdmg(Obj_AI_Base target)
         {
+            if (Q.Level == 0) return 0;
             return Player.CalculateDamage(target,DamageType.Magical,
-                new[] { 60, 85, 110, 135, 160 }[Q.Level - 1] + 0.45 * Player.FlatMagicDamageMod) * overkill;
+                new[] { 60, 85, 110, 135, 160 }[Q.Level - 1] + 0.45 * Player.FlatMagicDamageMod) - overkill;
         }
         private static double Wdmg(Obj_AI_Base target)
         {
+            if (W.Level == 0) return 0;
             return Player.CalculateDamage(target, DamageType.Magical,
-                new[] { 40, 75, 110, 145, 180 }[W.Level - 1] + 0.25 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 0.60) * overkill;
+                new[] { 40, 75, 110, 145, 180 }[W.Level - 1] + 0.25 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 0.60) - overkill;
         }
         private static double Edmg(Obj_AI_Base target)
         {
+            if (E.Level == 0) return 0;
             return Player.CalculateDamage(target, DamageType.Magical,
-                new[] { 40, 70, 100, 130, 160 }[E.Level - 1] + 0.25 * Player.FlatMagicDamageMod) * overkill;
+                new[] { 40, 70, 100, 130, 160 }[E.Level - 1] + 0.25 * Player.FlatMagicDamageMod) - overkill;
         }
         private static double MarkDmg(Obj_AI_Base target)
         {
-            return Player.CalculateDamage(target, DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15) * overkill;        
+            return Player.CalculateDamage(target, DamageType.Magical, Player.FlatMagicDamageMod * 0.15 + Player.Level * 15) - overkill;        
         }
         private static double RDmg(Obj_AI_Base target)
         {
+            if (R.Level == 0) return 0;
             return Player.CalculateDamage(target, DamageType.Magical,
-               new[] { 350, 550, 750 }[R.Level - 1] + 2.5 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 3.75) * overkill;
+               new[] { 350, 550, 750 }[R.Level - 1] + 2.5 * Player.FlatMagicDamageMod + (Player.TotalAttackDamage - Player.BaseAttackDamage) * 3.75) - overkill;
         }
         private static double IgniteDmg(Obj_AI_Base target)
         {
