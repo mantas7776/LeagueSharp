@@ -131,15 +131,18 @@ namespace KataSDK
                     pos.Y += 20;
                     pos.X += 9;
                     Vector2 pos2 = pos;
+                    Vector2 ultdmgpos = pos;
                     var currenthp = hero.Health * 104f / hero.MaxHealth;
                     pos.X += currenthp;
                    // Console.WriteLine("Curr: " + currenthp);
-                    var aftercombo = CalculateDmg(hero);
+                    var aftercombo = CalculateDmg(hero) * 104f / hero.MaxHealth;
                     pos2.X += aftercombo;
+                    ultdmgpos.X += (CalculateDmg(hero) - (float)RDmg(hero)) * 104f / hero.MaxHealth;
                     if (aftercombo <= currenthp - 1)
                     {
                         Drawing.DrawLine(pos, pos2, 1, System.Drawing.Color.Aqua);
                     }
+                    Drawing.DrawLine(pos2, ultdmgpos, 1, System.Drawing.Color.Red);
                 }
             }
         }
@@ -150,10 +153,8 @@ namespace KataSDK
             if (Q.IsReady()) lefthp -= (float)Qdmg(hero);
             if (E.IsReady()) lefthp -= (float)Edmg(hero);
             if (W.IsReady()) lefthp -= (float)Wdmg(hero);
-            if (R.IsReady()) lefthp -= (float)RDmg(hero);
             lefthp -= (float)MarkDmg(hero);
             //Console.WriteLine(lefthp);
-            lefthp = lefthp * 104f / hero.MaxHealth;
             return lefthp;
         }
 
